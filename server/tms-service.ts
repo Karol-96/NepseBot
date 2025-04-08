@@ -12,6 +12,8 @@ interface TMSAuthResponse {
 interface TMSOrderResponse {
   success: boolean;
   order_id?: string;
+  status?: string;
+  processed_at?: Date;
   error?: string;
 }
 
@@ -129,9 +131,12 @@ export class TMSService {
       */
       
       // Simulate order submission (replace with actual API call)
+      const now = new Date();
       return {
         success: true,
         order_id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: "PENDING",
+        processed_at: now
       };
     } catch (error) {
       console.error("TMS order submission error:", error);
@@ -149,7 +154,13 @@ export class TMSService {
    * @param res Express response object
    * @param orderData Validated order form data
    */
-  static async processOrder(orderData: OrderFormValues): Promise<{success: boolean; message: string; order_id?: string}> {
+  static async processOrder(orderData: OrderFormValues): Promise<{
+    success: boolean; 
+    message: string; 
+    order_id?: string;
+    status?: string;
+    processed_at?: Date;
+  }> {
     try {
       // Submit order to TMS API
       const tmsResponse = await this.submitOrder(orderData);
@@ -165,6 +176,8 @@ export class TMSService {
         success: true,
         message: "Order successfully processed by TMS",
         order_id: tmsResponse.order_id,
+        status: tmsResponse.status,
+        processed_at: tmsResponse.processed_at
       };
     } catch (error) {
       console.error("Error processing order with TMS:", error);

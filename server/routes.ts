@@ -26,12 +26,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Extract order data for database (exclude TMS credentials)
+      // Extract order data for database (exclude TMS credentials but include TMS order data)
       const orderData = {
         symbol: formValidationResult.data.symbol,
         quantity: formValidationResult.data.quantity,
         order_type: formValidationResult.data.order_type,
         trigger_price_percent: formValidationResult.data.trigger_price_percent.toString(),
+        // Include TMS order data
+        tms_order_id: tmsResult.order_id,
+        tms_status: tmsResult.status,
+        tms_processed_at: tmsResult.processed_at
       };
 
       // Create order in the database
@@ -39,7 +43,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(201).json({
         ...order,
-        tms_order_id: tmsResult.order_id,
         tms_message: tmsResult.message
       });
     } catch (error) {

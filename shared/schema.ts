@@ -23,7 +23,11 @@ export const orders = pgTable("orders", {
   quantity: integer("quantity").notNull(),
   order_type: text("order_type").notNull(), // "Buy" or "Sell"
   trigger_price_percent: decimal("trigger_price_percent", { precision: 10, scale: 2 }).notNull(),
-  submitted_at: timestamp("submitted_at").defaultNow().notNull()
+  submitted_at: timestamp("submitted_at").defaultNow().notNull(),
+  // TMS order data (but not credentials)
+  tms_order_id: text("tms_order_id"),
+  tms_status: text("tms_status"),
+  tms_processed_at: timestamp("tms_processed_at")
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({

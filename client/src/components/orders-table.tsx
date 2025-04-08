@@ -49,6 +49,8 @@ export function OrdersTable() {
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">Quantity</th>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">Type</th>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">Trigger(%)</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">TMS Order ID</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">TMS Status</th>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-700 uppercase tracking-wider">Date</th>
             </tr>
           </thead>
@@ -61,13 +63,15 @@ export function OrdersTable() {
                   <td className="px-4 py-3"><Skeleton className="h-5 w-12" /></td>
                   <td className="px-4 py-3"><Skeleton className="h-5 w-14" /></td>
                   <td className="px-4 py-3"><Skeleton className="h-5 w-10" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-16" /></td>
                   <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
                 </tr>
               ))
             ) : isError ? (
               // Error state
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-error-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-error-500">
                   Error loading orders. Please try again.
                 </td>
               </tr>
@@ -95,6 +99,22 @@ export function OrdersTable() {
                       ? parseFloat(order.trigger_price_percent).toFixed(2)
                       : order.trigger_price_percent.toFixed(2)}%
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-secondary-600 font-mono text-xs">
+                    {order.tms_order_id || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {order.tms_status ? (
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        order.tms_status === 'COMPLETED' 
+                          ? 'bg-green-100 text-green-800'
+                          : order.tms_status === 'REJECTED'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {order.tms_status}
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                     {format(new Date(order.submitted_at), 'yyyy-MM-dd')}
                   </td>
@@ -103,7 +123,7 @@ export function OrdersTable() {
             ) : (
               // Empty state
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                   No orders found. Submit your first order above.
                 </td>
               </tr>
