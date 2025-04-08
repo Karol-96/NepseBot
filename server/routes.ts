@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertOrderSchema } from "@shared/schema";
@@ -61,6 +61,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching order:", error);
       return res.status(500).json({ 
         message: "Failed to fetch order. Please try again later." 
+      });
+    }
+  });
+
+  // API endpoint to proxy market data requests
+  app.get("/api/market-data", async (_req: Request, res: Response) => {
+    try {
+      const response = await fetch("https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary");
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ 
+          message: `Market data API returned status: ${response.status}` 
+        });
+      }
+      
+      const data = await response.json();
+      return res.status(200).json(data);
+    } catch (error) {
+      console.error("Error fetching market data:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch market data. Please try again later." 
       });
     }
   });
