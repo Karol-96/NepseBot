@@ -95,27 +95,36 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-secondary-800">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header with Navigation */}
-        <header className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-secondary-800 mb-2">Market Dashboard</h1>
-            <p className="text-secondary-700">
-              Live market data updated {isLoading ? "..." : `at ${formatTimestamp(dataUpdatedAt)}`}
+    <div className="font-sans text-secondary-800">
+      {/* Dashboard Hero Section */}
+      <div className="bg-gradient-to-b from-blue-50 to-white py-10 mb-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl md:text-4xl font-bold text-secondary-900 mb-3 text-center">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-800">
+                Market Data Dashboard
+              </span>
+            </h1>
+            <p className="text-secondary-600 text-center text-lg mb-6">
+              Real-time market insights to inform your trading decisions
             </p>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mb-2">
+              <div className="bg-white rounded-full px-4 py-2 shadow-sm border border-gray-200 flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-secondary-700 text-sm">
+                  Last updated: {isLoading ? "Loading..." : formatTimestamp(dataUpdatedAt)}
+                </span>
+              </div>
+              <Button variant="outline" onClick={() => refetch()} className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Refresh Data
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => refetch()} className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-            <Link href="/">
-              <Button variant="secondary">Order Form</Button>
-            </Link>
-          </div>
-        </header>
+        </div>
+      </div>
 
+      <div className="container mx-auto px-4 max-w-6xl">
         {/* Search input */}
         <div className="relative mb-6">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -139,7 +148,7 @@ export default function Dashboard() {
         )}
 
         {/* Market data table */}
-        <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white border rounded-lg shadow-md overflow-hidden">
           <Table>
             <TableCaption>
               Showing {paginatedData.length} of {filteredData.length} stocks

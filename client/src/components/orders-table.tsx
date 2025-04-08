@@ -95,9 +95,11 @@ export function OrdersTable() {
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-secondary-700">
-                    {typeof order.trigger_price_percent === 'string'
-                      ? parseFloat(order.trigger_price_percent).toFixed(2)
-                      : order.trigger_price_percent.toFixed(2)}%
+                    {(typeof order.trigger_price_percent === 'string'
+                      ? parseFloat(order.trigger_price_percent)
+                      : order.trigger_price_percent !== null 
+                        ? order.trigger_price_percent 
+                        : 0).toFixed(2)}%
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-secondary-600 font-mono text-xs">
                     {order.tms_order_id || '-'}
