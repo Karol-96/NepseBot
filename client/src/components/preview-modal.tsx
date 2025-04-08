@@ -42,7 +42,16 @@ export function PreviewModal({ open, formData, onConfirm, onCancel }: PreviewMod
                 <p className="font-medium text-secondary-800">{formData.trigger_price_percent}%</p>
               </div>
             </div>
-            <div className="mt-2 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div>
+                <p className="text-sm text-secondary-700">TMS Username</p>
+                <p className="font-medium text-secondary-800">{formData.tms_username}</p>
+                <p className="text-xs text-secondary-600 mt-1">
+                  Your password is securely protected and will only be used for this transaction.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-secondary-700">Please review your order details before submission.</p>
             </div>
           </div>

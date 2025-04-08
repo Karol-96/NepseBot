@@ -23,6 +23,8 @@ export function OrderForm() {
       quantity: undefined,
       order_type: undefined,
       trigger_price_percent: undefined,
+      tms_username: "",
+      tms_password: "",
     },
   });
 
@@ -32,10 +34,10 @@ export function OrderForm() {
       const response = await apiRequest("POST", "/api/orders", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
-        description: "Order submitted successfully!",
+        description: data.tms_message || "Order submitted successfully!",
         variant: "default",
       });
       
@@ -175,6 +177,55 @@ export function OrderForm() {
               </FormItem>
             )}
           />
+          
+          {/* TMS Credentials Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-semibold mb-4 text-secondary-700">TMS Account Credentials</h3>
+            <p className="text-sm text-secondary-600 mb-4">
+              Enter your Trading Management System (TMS) credentials to authenticate and place orders directly. 
+              Your credentials are securely used for the current session only and are never stored permanently.
+            </p>
+            
+            {/* TMS Username */}
+            <FormField
+              control={form.control}
+              name="tms_username"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm font-medium text-secondary-700">TMS Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Enter your TMS username"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-error-500 text-sm" />
+                </FormItem>
+              )}
+            />
+            
+            {/* TMS Password */}
+            <FormField
+              control={form.control}
+              name="tms_password"
+              render={({ field }) => (
+                <FormItem className="space-y-2 mt-4">
+                  <FormLabel className="text-sm font-medium text-secondary-700">TMS Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your TMS password"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-error-500 text-sm" />
+                </FormItem>
+              )}
+            />
+          </div>
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-2">

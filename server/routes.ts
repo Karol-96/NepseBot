@@ -1,25 +1,47 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertOrderSchema } from "@shared/schema";
+import { insertOrderSchema, orderFormSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { TMSService } from "./tms-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to create a new order
   app.post("/api/orders", async (req: Request, res: Response) => {
     try {
-      // Validate the request body using zod schema
-      const result = insertOrderSchema.safeParse(req.body);
+      // Validate the complete form data including TMS credentials using orderFormSchema
+      const formValidationResult = orderFormSchema.safeParse(req.body);
       
-      if (!result.success) {
-        const errorMessage = fromZodError(result.error).message;
+      if (!formValidationResult.success) {
+        const errorMessage = fromZodError(formValidationResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
 
-      // Create order in the database
-      const order = await storage.createOrder(result.data);
+      // Process order with TMS API
+      const tmsResult = await TMSService.processOrder(formValidationResult.data);
       
-      return res.status(201).json(order);
+      if (!tmsResult.success) {
+        return res.status(400).json({ 
+          message: tmsResult.message || "TMS order processing failed"
+        });
+      }
+
+      // Extract order data for database (exclude TMS credentials)
+      const orderData = {
+        symbol: formValidationResult.data.symbol,
+        quantity: formValidationResult.data.quantity,
+        order_type: formValidationResult.data.order_type,
+        trigger_price_percent: formValidationResult.data.trigger_price_percent.toString(),
+      };
+
+      // Create order in the database
+      const order = await storage.createOrder(orderData);
+      
+      return res.status(201).json({
+        ...order,
+        tms_order_id: tmsResult.order_id,
+        tms_message: tmsResult.message
+      });
     } catch (error) {
       console.error("Error creating order:", error);
       return res.status(500).json({ 

@@ -38,7 +38,10 @@ export const orderFormSchema = insertOrderSchema.extend({
   order_type: z.enum(["Buy", "Sell"], { 
     errorMap: () => ({ message: "Please select an order type" })
   }),
-  trigger_price_percent: z.number().positive({ message: "Trigger price must be greater than 0%" })
+  trigger_price_percent: z.number().positive({ message: "Trigger price must be greater than 0%" }),
+  // TMS credentials - these won't be stored in the database, only used for API authentication
+  tms_username: z.string().min(1, { message: "TMS Username is required" }),
+  tms_password: z.string().min(1, { message: "TMS Password is required" })
 });
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
