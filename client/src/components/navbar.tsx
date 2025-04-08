@@ -46,7 +46,7 @@ export function Navbar() {
           <div className="flex items-center">
             <Link href="/">
               <div className="flex items-center cursor-pointer">
-                <div className="bg-primary-600 text-white rounded-md p-1.5 mr-2">
+                <div className="bg-gradient-to-tr from-primary-600 to-primary-500 text-white rounded-md p-1.5 mr-2 shadow-sm">
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     viewBox="0 0 24 24" 
@@ -61,7 +61,10 @@ export function Navbar() {
                     <path d="M4 20h16" />
                   </svg>
                 </div>
-                <span className="font-bold text-xl text-primary-800">TradePro</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xl text-primary-800">TradePro</span>
+                  <span className="text-xs text-primary-500 -mt-1">Trading Management</span>
+                </div>
               </div>
             </Link>
           </div>

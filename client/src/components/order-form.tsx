@@ -88,7 +88,7 @@ export function OrderForm() {
                 <FormControl>
                   <Input
                     placeholder="e.g., GMLI"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
                     {...field}
                   />
                 </FormControl>
@@ -108,7 +108,7 @@ export function OrderForm() {
                   <Input
                     type="number"
                     placeholder="e.g., 1000"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
                     {...field}
                     onChange={(e) => {
                       const value = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
@@ -134,7 +134,7 @@ export function OrderForm() {
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white">
+                    <SelectTrigger className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300 bg-white">
                       <SelectValue placeholder="Select order type" />
                     </SelectTrigger>
                   </FormControl>
@@ -161,14 +161,14 @@ export function OrderForm() {
                       type="number"
                       step="0.01"
                       placeholder="e.g., 8"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pr-8"
+                      className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300 pr-8"
                       {...field}
                       onChange={(e) => {
                         const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
                         field.onChange(value);
                       }}
                     />
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-primary-500">
                       %
                     </div>
                   </div>
@@ -179,12 +179,20 @@ export function OrderForm() {
           />
           
           {/* TMS Credentials Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-semibold mb-4 text-secondary-700">TMS Account Credentials</h3>
-            <p className="text-sm text-secondary-600 mb-4">
-              Enter your Trading Management System (TMS) credentials to authenticate and place orders directly. 
-              Your credentials are securely used for the current session only and are never stored permanently.
-            </p>
+          <div className="mt-8 pt-6 border-t border-primary-100">
+            <div className="flex items-center mb-4">
+              <div className="w-1 h-5 bg-primary-400 rounded-full mr-3"></div>
+              <h3 className="text-lg font-semibold text-primary-800">TMS Account Credentials</h3>
+            </div>
+            <div className="bg-primary-50 rounded-md p-4 mb-5 border border-primary-100">
+              <p className="text-sm text-secondary-700 flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                Enter your Trading Management System (TMS) credentials to authenticate and place orders directly. 
+                Your credentials are securely used for the current session only and are never stored permanently.
+              </p>
+            </div>
             
             {/* TMS Username */}
             <FormField
@@ -197,7 +205,7 @@ export function OrderForm() {
                     <Input
                       type="text"
                       placeholder="Enter your TMS username"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
                       {...field}
                     />
                   </FormControl>
@@ -217,7 +225,7 @@ export function OrderForm() {
                     <Input
                       type="password"
                       placeholder="Enter your TMS password"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
                       {...field}
                     />
                   </FormControl>
@@ -228,21 +236,40 @@ export function OrderForm() {
           </div>
 
           {/* Form Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 py-2 px-4 border border-primary-500 text-primary-600 rounded-md shadow-sm hover:bg-primary-50"
+              className="flex-1 py-2.5 px-4 border border-primary-300 text-primary-700 rounded-md shadow-sm hover:bg-primary-50 font-medium"
               onClick={onPreview}
             >
-              Preview
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+              </svg>
+              Preview Order
             </Button>
             <Button
               type="submit"
               disabled={orderMutation.isPending}
-              className="flex-1 py-2 px-4 bg-primary-600 text-white rounded-md shadow-sm hover:bg-primary-700"
+              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-md shadow-sm hover:from-primary-700 hover:to-primary-600 font-medium"
             >
-              {orderMutation.isPending ? "Submitting..." : "Submit"}
+              {orderMutation.isPending ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Submit Order
+                </>
+              )}
             </Button>
           </div>
         </form>
