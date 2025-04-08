@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
-import { OrderFormValues } from "@shared/schema";
+import { OrderFormValues, Order } from "@shared/schema";
+
+// Extended interface for order data including current price
+interface OrderExecutionData extends Partial<OrderFormValues>, Partial<Order> {
+  current_price?: number;
+}
 
 // Interface for TMS authentication response
 interface TMSAuthResponse {
@@ -86,8 +91,15 @@ export class TMSService {
    * @param orderData Order form data including TMS credentials
    * @returns Order submission response with success status and order ID if successful
    */
-  static async submitOrder(orderData: OrderFormValues): Promise<TMSOrderResponse> {
+  static async submitOrder(orderData: OrderExecutionData): Promise<TMSOrderResponse> {
     try {
+      if (!orderData.tms_username || !orderData.tms_password) {
+        return {
+          success: false,
+          error: "TMS credentials are required"
+        };
+      }
+
       // First, authenticate with TMS
       const authResponse = await this.authenticate(orderData.tms_username, orderData.tms_password);
       
@@ -104,18 +116,31 @@ export class TMSService {
       // For now, we'll simulate a successful order submission
       // In a real implementation, you'd use something like this:
       /*
+      // Prepare order payload with additional data for trigger orders if available
+      const orderPayload: any = {
+        symbol: orderData.symbol,
+        quantity: orderData.quantity,
+        order_type: orderData.order_type,
+      };
+      
+      // For regular orders, include trigger percentage
+      if (!orderData.is_trigger_order && orderData.trigger_price_percent) {
+        orderPayload.trigger_price_percent = orderData.trigger_price_percent;
+      }
+      
+      // For triggered orders being executed, include execution price
+      if (orderData.is_trigger_order && orderData.current_price) {
+        orderPayload.execution_price = orderData.current_price;
+        orderPayload.is_market_order = true; // Execute immediately at market price
+      }
+      
       const response = await fetch(`${this.apiBaseUrl}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authResponse.token}`,
         },
-        body: JSON.stringify({
-          symbol: orderData.symbol,
-          quantity: orderData.quantity,
-          order_type: orderData.order_type,
-          trigger_price_percent: orderData.trigger_price_percent,
-        }),
+        body: JSON.stringify(orderPayload),
       });
       
       if (!response.ok) {
@@ -127,15 +152,29 @@ export class TMSService {
       return {
         success: true,
         order_id: orderResponse.order_id,
+        status: orderResponse.status,
+        processed_at: new Date(orderResponse.processed_at)
       };
       */
       
       // Simulate order submission (replace with actual API call)
       const now = new Date();
+      
+      // Generate order ID with timestamp for traceability
+      const orderId = `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Generate different status based on whether this is a triggered order or not
+      const status = orderData.is_trigger_order ? "EXECUTED" : "PENDING";
+      
+      // Log additional details for trigger orders
+      if (orderData.is_trigger_order && orderData.current_price) {
+        console.log(`Executing triggered order ${orderData.id} at market price: ${orderData.current_price}`);
+      }
+      
       return {
         success: true,
-        order_id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        status: "PENDING",
+        order_id: orderId,
+        status: status,
         processed_at: now
       };
     } catch (error) {
@@ -149,17 +188,17 @@ export class TMSService {
   
   /**
    * Handle the full order submission process including TMS API integration
-   * This is the main method to be used from the routes
-   * @param req Express request object
-   * @param res Express response object
-   * @param orderData Validated order form data
+   * This is the main method to be used from the routes and order monitoring service
+   * @param orderData Order data including TMS credentials
+   * @returns Response with order details
    */
-  static async processOrder(orderData: OrderFormValues): Promise<{
+  static async processOrder(orderData: OrderExecutionData): Promise<{
     success: boolean; 
     message: string; 
     order_id?: string;
     status?: string;
     processed_at?: Date;
+    error?: string;
   }> {
     try {
       // Submit order to TMS API
@@ -169,21 +208,30 @@ export class TMSService {
         return {
           success: false,
           message: tmsResponse.error || "Failed to process order with TMS",
+          error: tmsResponse.error
         };
+      }
+      
+      // For trigger orders, include additional information in the response
+      let message = "Order successfully processed by TMS";
+      if (orderData.is_trigger_order && orderData.current_price) {
+        message = `Triggered order executed at price: ${orderData.current_price}`;
       }
       
       return {
         success: true,
-        message: "Order successfully processed by TMS",
+        message: message,
         order_id: tmsResponse.order_id,
         status: tmsResponse.status,
         processed_at: tmsResponse.processed_at
       };
     } catch (error) {
       console.error("Error processing order with TMS:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to process order with TMS";
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Failed to process order with TMS",
+        message: errorMessage,
+        error: errorMessage
       };
     }
   }

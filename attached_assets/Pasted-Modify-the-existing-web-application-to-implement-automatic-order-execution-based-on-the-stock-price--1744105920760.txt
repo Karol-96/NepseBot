@@ -1,0 +1,50 @@
+Modify the existing web application to implement automatic order execution based on the stock price reaching a trigger value as defined by the user in the order form.
+
+Workflow:
+User Input:
+
+The user submits an order with the following details:
+
+Stock Symbol (e.g., GMLI)
+
+Quantity (e.g., 1000)
+
+Order Type (dropdown: Buy / Sell)
+
+Trigger Price (percentage input, e.g., 8%)
+
+TMS Credentials (username and password) for authentication and order fulfillment.
+
+Dashboard Data Monitoring:
+
+The Dashboard fetches the live market data for the stock symbol entered in the order form (e.g., GMLI) from the market summary API (https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary).
+
+The last traded price (LTP) for the stock is retrieved and stored.
+
+Price Trigger:
+
+Calculate the target price by applying the user-defined trigger price to the current LTP (e.g., if LTP is 2424 and trigger is 8%, the target price becomes 2612).
+
+Continuously monitor the stock's LTP, and when the LTP reaches or exceeds the target price, automatically trigger the order.
+
+If the order type is Buy, place the order to buy the stock at the current price. If the order type is Sell, place the order to sell at the current price.
+
+Order Execution:
+
+Use the TMS credentials provided by the user to authenticate and place the order (via the TMS API).
+
+Ensure that the order is processed and either a success or failure message is displayed to the user.
+
+The order details should be logged and stored in the PostgreSQL database as before.
+
+Additional Requirements:
+Real-Time Monitoring: Set up a process to periodically check if the LTP reaches or exceeds the target price (e.g., every 30 seconds or 1 minute).
+
+Error Handling: In case the LTP is unavailable or the order cannot be placed (e.g., invalid credentials, market conditions), show an appropriate error message to the user.
+
+UI Feedback: Provide real-time feedback in the dashboard to notify the user when the order has been automatically triggered and fulfilled.
+
+Security:
+Handle TMS credentials securely, ensuring they are only used temporarily for order fulfillment.
+
+Encrypt the TMS credentials while they are in use and ensure HTTPS communication when interacting with the TMS API.

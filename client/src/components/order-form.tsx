@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { OrderFormValues, orderFormSchema } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +15,7 @@ import { PreviewModal } from "@/components/preview-modal";
 export function OrderForm() {
   const { toast } = useToast();
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isTriggerOrder, setIsTriggerOrder] = useState(false);
 
   // Form definition with validation
   const form = useForm<OrderFormValues>({
@@ -25,36 +27,50 @@ export function OrderForm() {
       trigger_price_percent: undefined,
       tms_username: "",
       tms_password: "",
+      is_trigger_order: false,
     },
   });
 
-  // API mutation for submitting orders
+  // API mutation for regular orders
   const orderMutation = useMutation({
     mutationFn: async (data: OrderFormValues) => {
-      const response = await apiRequest("POST", "/api/orders", data);
+      const endpoint = data.is_trigger_order ? "/api/trigger-orders" : "/api/orders";
+      const response = await apiRequest("POST", endpoint, data);
       return response.json();
     },
     onSuccess: (data) => {
+      const orderType = isTriggerOrder ? "Trigger order" : "Order";
       toast({
         title: "Success",
-        description: data.tms_message || "Order submitted successfully!",
+        description: data.message || `${orderType} submitted successfully!`,
         variant: "default",
       });
       
       // Reset form after successful submission
       form.reset();
+      setIsTriggerOrder(false);
       
       // Invalidate queries to refresh the orders list
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      if (isTriggerOrder) {
+        queryClient.invalidateQueries({ queryKey: ["/api/trigger-orders"] });
+      }
     },
     onError: (error) => {
+      const orderType = isTriggerOrder ? "trigger order" : "order";
       toast({
         title: "Error",
-        description: error.message || "Failed to submit order. Please try again.",
+        description: error.message || `Failed to submit ${orderType}. Please try again.`,
         variant: "destructive",
       });
     },
   });
+
+  // Handle trigger order checkbox change
+  const handleTriggerOrderChange = (checked: boolean) => {
+    setIsTriggerOrder(checked);
+    form.setValue('is_trigger_order', checked);
+  };
 
   // Preview form data before submission
   const onPreview = () => {
@@ -174,6 +190,31 @@ export function OrderForm() {
                   </div>
                 </FormControl>
                 <FormMessage className="text-error-500 text-sm" />
+              </FormItem>
+            )}
+          />
+          
+          {/* Trigger Order Checkbox */}
+          <FormField
+            control={form.control}
+            name="is_trigger_order"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-primary-200 p-4 bg-primary-50">
+                <FormControl>
+                  <Checkbox
+                    checked={isTriggerOrder}
+                    onCheckedChange={handleTriggerOrderChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm font-medium text-secondary-700">
+                    Create as trigger order
+                  </FormLabel>
+                  <p className="text-xs text-secondary-500">
+                    Instead of executing immediately, this order will be monitored and executed 
+                    automatically when the price reaches the target level.
+                  </p>
+                </div>
               </FormItem>
             )}
           />

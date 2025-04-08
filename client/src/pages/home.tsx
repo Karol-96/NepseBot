@@ -1,5 +1,6 @@
 import { OrderForm } from "@/components/order-form";
 import { OrdersTable } from "@/components/orders-table";
+import { TriggerOrdersTable } from "@/components/trigger-orders-table";
 import { ArrowRight } from "lucide-react";
 
 export default function Home() {
@@ -41,6 +42,11 @@ export default function Home() {
             <h2 className="text-xl font-semibold text-secondary-800">Submit New Order</h2>
           </div>
           <OrderForm />
+        </div>
+
+        {/* Trigger Orders Section */}
+        <div className="mb-8">
+          <TriggerOrdersTable />
         </div>
 
         {/* Recent Orders Section */}
