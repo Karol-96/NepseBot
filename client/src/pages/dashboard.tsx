@@ -51,6 +51,17 @@ export default function Dashboard() {
   const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery<MarketDataResponse>({
     queryKey: ["/api/market-data"],
     refetchInterval: 60000, // Refetch every minute
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/market-data");
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : "Failed to fetch market data");
+      }
+    }
   });
 
   const handleSort = (field: keyof StockData) => {
@@ -63,11 +74,11 @@ export default function Dashboard() {
   };
 
   // Filter and sort data
-  const filteredData = data?.stock?.detail
-    ? data.stock.detail.filter(stock => 
-        stock.s.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+  const filteredData = data?.stock?.detail 
+  ? data.stock.detail.filter(stock => 
+      stock.s.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  : [];
     
   const sortedData = [...filteredData].sort((a, b) => {
     if (sortField === "s") {

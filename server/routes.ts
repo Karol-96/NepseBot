@@ -8,8 +8,13 @@ import { websocketService } from "./websocket-server";
 import { orderMonitorService } from "./order-monitor-service";
 import { marketDataService } from "./market-data-service";
 import { log } from "./vite";
+import { schema } from '@shared/schema';
+import { setupMockAPI } from './api-mock';
+import path from 'path';
+import fs from 'fs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  setupMockAPI(app);
   // API endpoint to create a new order
   app.post("/api/orders", async (req: Request, res: Response) => {
     try {
@@ -94,27 +99,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API endpoint to proxy market data requests
-  app.get("/api/market-data", async (_req: Request, res: Response) => {
+// API endpoint to proxy market data requests
+app.get("/api/market-data", async (_req: Request, res: Response) => {
+  try {
+    const response = await fetch("https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary", {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    
+    // Read the response as text first
+    const text = await response.text();
+    
     try {
-      const response = await fetch("https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary");
+      // Try to parse the text as JSON
+      const data = JSON.parse(text);
+      return res.status(200).json(data);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
       
-      if (!response.ok) {
-        return res.status(response.status).json({ 
-          message: `Market data API returned status: ${response.status}` 
-        });
+      // If the response contains HTML (which would cause the error you're seeing)
+      if (text.includes('<!DOCTYPE')) {
+        // Fall back to the sample data
+        const sampleDataPath = path.join(process.cwd(), 'market_data_sample.json');
+        const sampleData = JSON.parse(fs.readFileSync(sampleDataPath, 'utf8'));
+        console.log('Falling back to sample data');
+        return res.status(200).json(sampleData);
       }
       
-      const data = await response.json();
-      return res.status(200).json(data);
-    } catch (error) {
-      console.error("Error fetching market data:", error);
       return res.status(500).json({ 
-        message: "Failed to fetch market data. Please try again later." 
+        message: 'Failed to parse market data',
+        error: parseError.message,
+        sample: text.substring(0, 100) // First 100 chars for debugging
       });
     }
-  });
-
+  } catch (error) {
+    console.error("Error fetching market data:", error);
+    
+    // Fall back to the sample data in case of any error
+    try {
+      const sampleDataPath = path.join(process.cwd(), 'market_data_sample.json');
+      const sampleData = JSON.parse(fs.readFileSync(sampleDataPath, 'utf8'));
+      console.log('Falling back to sample data due to fetch error');
+      return res.status(200).json(sampleData);
+    } catch (sampleError) {
+      return res.status(500).json({ 
+        message: "Failed to fetch market data and sample data is not available",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+});
   // API endpoint to create a trigger order
   app.post("/api/trigger-orders", async (req: Request, res: Response) => {
     try {

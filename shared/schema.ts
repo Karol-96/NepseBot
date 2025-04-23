@@ -78,7 +78,27 @@ export const orderFormSchema = insertOrderSchema.extend({
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type OrderFormValues = z.infer<typeof orderFormSchema>;
-export type Order = typeof orders.$inferSelect;
+
+// Explicit Order interface for frontend use
+export interface Order {
+  id: number;
+  symbol: string;
+  quantity: number;
+  order_type: string;
+  trigger_price_percent: string | number;
+  submitted_at: string;
+  is_trigger_order: boolean;
+  base_price?: string | null;
+  target_price?: string | null;
+  trigger_status?: string | null;
+  last_checked_at?: string | null;
+  triggered_at?: string | null;
+  executed_at?: string | null;
+  execution_price?: string | null;
+  tms_order_id?: string | null;
+  tms_status?: string | null;
+  tms_processed_at?: string | null;
+}
 
 // Type for market data from the API
 export interface StockData {

@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: tradetrigger
+      POSTGRES_PASSWORD: tradetrigger123
+      POSTGRES_DB: tradetrigger
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U tradetrigger -d tradetrigger
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  migration:
+    build: 
+      context: .
+      dockerfile: Dockerfile.migration
+    environment:
+      - PGHOST=db
+      - PGUSER=tradetrigger
+      - PGPASSWORD=tradetrigger123
+      - PGDATABASE=tradetrigger
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "5173:5173"
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://tradetrigger:tradetrigger123@db:5432/tradetrigger
+      - NODE_ENV=development
+    depends_on:
+      - migration
+
+volumes:
+  postgres_data:

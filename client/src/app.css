@@ -1,0 +1,109 @@
+
+:root {
+    --primary-50: #f0fdf4;
+    --primary-100: #dcfce7;
+    --primary-200: #bbf7d0;
+    --primary-300: #86efac;
+    --primary-400: #4ade80;
+    --primary-500: #22c55e;
+    --primary-600: #16a34a;
+    --primary-700: #15803d;
+    --primary-800: #166534;
+    --primary-900: #14532d;
+    
+    --secondary-50: #f8fafc;
+    --secondary-100: #f1f5f9;
+    --secondary-200: #e2e8f0;
+    --secondary-300: #cbd5e1;
+    --secondary-400: #94a3b8;
+    --secondary-500: #64748b;
+    --secondary-600: #475569;
+    --secondary-700: #334155;
+    --secondary-800: #1e293b;
+    --secondary-900: #0f172a;
+    
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+  }
+  
+  body {
+    background-color: var(--gray-50);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  .bg-primary-50 {
+    background-color: var(--primary-50);
+  }
+  
+  .bg-primary-100 {
+    background-color: var(--primary-100);
+  }
+  
+  .bg-primary-200 {
+    background-color: var(--primary-200);
+  }
+  
+  .bg-primary-300 {
+    background-color: var(--primary-300);
+  }
+  
+  .bg-primary-500 {
+    background-color: var(--primary-500);
+  }
+  
+  .border-primary-100 {
+    border-color: var(--primary-100);
+  }
+  
+  .border-primary-200 {
+    border-color: var(--primary-200);
+  }
+  
+  .text-primary-600 {
+    color: var(--primary-600);
+  }
+  
+  .text-primary-700 {
+    color: var(--primary-700);
+  }
+  
+  .text-secondary-700 {
+    color: var(--secondary-700);
+  }
+  
+  .text-secondary-800 {
+    color: var(--secondary-800);
+  }
+  
+  .text-secondary-900 {
+    color: var(--secondary-900);
+  }
+  
+  .from-primary-100 {
+    --tw-gradient-from: var(--primary-100);
+  }
+  
+  .to-primary-50\/50 {
+    --tw-gradient-to: rgba(240, 253, 244, 0.5);
+  }
+  
+  .via-primary-600 {
+    --tw-gradient-stops: var(--primary-600);
+  }
+  
+  .from-primary-700 {
+    --tw-gradient-from: var(--primary-700);
+  }
+  
+  .to-primary-800 {
+    --tw-gradient-to: var(--primary-800);
+  }
+  
+  .bg-gradient-to-b {
+    background-image: linear-gradient(to bottom, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-to)));
+  }
+  
+  .bg-gradient-to-r {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops, var(--tw-gradient-from), var(--tw-gradient-via, var(--primary-600)), var(--tw-gradient-to)));
+  }
