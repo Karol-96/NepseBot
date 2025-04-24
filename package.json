@@ -1,7 +1,10 @@
 {
-  "type": "module",
   "name": "tradetrigger",
   "version": "1.0.0",
+  "workspaces": [
+    "shared"
+  ],
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
@@ -17,10 +20,21 @@
     "@radix-ui/react-accordion": "^1.2.1",
     "@tanstack/react-query": "^5.0.0",
     "clsx": "^2.0.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
     "lucide-react": "^0.331.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.2.1",
-    "wouter": "^3.0.0"
+    "wouter": "^3.0.0",
+    "zod": "^3.21.4",
+    "zod-validation-error": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^8.0.1",
+    "tsx": "^4.19.3",
+    "vite": "^6.3.3"
   }
 }
