@@ -131,6 +131,18 @@ export function OrderForm() {
                       field.onChange(value);
                     }}
                   />
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Broker Number</label>
+                    <input
+                      type="text"
+                      {...register("broker_number")}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      placeholder="21"
+                    />
+                    {errors.broker_number && (
+                      <p className="mt-1 text-sm text-red-600">{errors.broker_number.message}</p>
+                    )}
+                  </div>
                 </FormControl>
                 <FormMessage className="text-error-500 text-sm" />
               </FormItem>

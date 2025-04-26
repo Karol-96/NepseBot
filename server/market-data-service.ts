@@ -1,4 +1,5 @@
 import { StockData, MarketDataResponse } from '@shared/schema';
+import { log } from './vite'; // Add this import
 
 /**
  * Service for fetching and processing market data
@@ -14,41 +15,69 @@ export class MarketDataService {
    * @param symbols List of stock symbols to fetch data for
    * @returns Filtered stock data for the requested symbols
    */
-  async fetchLatestData(symbols: string[]): Promise<StockData[]> {
-    const now = Date.now();
+  private async fetchWithRetry(url: string, retries = 3, delay = 2000): Promise<any> {
+    let lastError;
     
-    // Rate limiting to avoid excessive API calls
-    if (now - this.lastFetchTime < this.fetchInterval) {
-      // Return cached data if we fetched recently
-      return this.getStocksFromCache(symbols);
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'TradeTrigger/1.0',
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        lastError = error;
+        log(`Fetch attempt ${attempt + 1} failed: ${error}`, 'market-data');
+        
+        if (attempt < retries - 1) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+  
+  // Update fetchLatestData to use fetchWithRetry
+  async fetchLatestData(symbols: string[]): Promise<StockData[]> {
+    if (symbols.length === 0) {
+      return [];
     }
     
     try {
-      // Update last fetch time
+      // Check if we should fetch fresh data
+      const now = Date.now();
+      if (now - this.lastFetchTime < this.fetchInterval) {
+        // Return cached data if available
+        return this.getStocksFromCache(symbols);
+      }
+      
+      // Fetch fresh data
+      const data = await this.fetchWithRetry(this.marketDataUrl);
       this.lastFetchTime = now;
       
-      const response = await fetch(this.marketDataUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch market data: ${response.status} ${response.statusText}`);
-      }
-      
-      const data: MarketDataResponse = await response.json();
-      
       if (!data || !data.stock || !data.stock.detail) {
-        throw new Error('Invalid market data format');
+        throw new Error('Invalid market data response format');
       }
       
-      // Process and filter relevant symbols
-      const stockData = this.processMarketData(data, symbols);
+      // Process and cache the data
+      const stocksData = this.processMarketData(data, symbols);
+      this.updateCache(stocksData);
       
-      // Update cache with fresh data
-      this.updateCache(stockData);
-      
-      return stockData;
+      return stocksData;
     } catch (error) {
-      console.error('Error fetching market data:', error);
+      log(`Error fetching market data: ${error}`, 'market-data');
       
-      // Fall back to cached data if available
+      // Return cached data if available, even if it's stale
       return this.getStocksFromCache(symbols);
     }
   }

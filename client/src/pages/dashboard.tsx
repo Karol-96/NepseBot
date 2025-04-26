@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { 
   Table, 
@@ -23,11 +23,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, ChevronUp, ChevronDown, Search } from "lucide-react";
 
-// Define type for stock data from API
 interface StockData {
   s: string;    // Symbol
   lp: number;   // Last Price
-  c: number;    // Percent Change
+  c?: number;   // Percent Change (from API structure)
+  pc?: number;  // Alternative field for percent change
   q: number;    // Quantity/Volume
 }
 
@@ -37,29 +37,63 @@ interface MarketDataResponse {
     date: string;
     detail: StockData[];
   };
-  // Other fields we don't need for now
 }
 
-export default function Dashboard() {
+function Dashboard() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof StockData>("s");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [errorDetails, setErrorDetails] = useState<string>("");
   const itemsPerPage = 20;
 
-  // Fetch market data
   const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery<MarketDataResponse>({
-    queryKey: ["/api/market-data"],
-    refetchInterval: 60000, // Refetch every minute
+    queryKey: ["market-data"],
+    refetchInterval: 60000,
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 300000,
     queryFn: async () => {
       try {
-        const response = await fetch("/api/market-data");
+        const response = await fetch(
+          "https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary", 
+          {
+            headers: {
+              "Accept": "application/json",
+            }
+          }
+        );
+  
         if (!response.ok) {
+          const errorText = await response.text();
+          setErrorDetails(errorText);
           throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
         }
-        return response.json();
+  
+        const jsonData = await response.json();
+        
+        // Transform the data to match our expected format
+        if (!jsonData.turnover?.detail) {
+          throw new Error("Invalid data structure received from server");
+        }
+  
+        // Transform the data to match our interface
+        return {
+          mt: jsonData.mt,
+          stock: {
+            date: jsonData.turnover.date,
+            detail: jsonData.turnover.detail.map((item: any) => ({
+              s: item.s,      // Symbol
+              lp: item.lp,    // Last Price
+              c: item.pc,     // Percent Change
+              q: item.q,      // Quantity/Volume
+            }))
+          }
+        };
       } catch (err) {
-        throw new Error(err instanceof Error ? err.message : "Failed to fetch market data");
+        console.error("Market data fetch error:", err);
+        setErrorDetails(err instanceof Error ? err.message : "Unknown error occurred");
+        throw err;
       }
     }
   });
@@ -73,12 +107,19 @@ export default function Dashboard() {
     }
   };
 
+  // Calculate percent change safely
+  const getChangePercent = (stock: StockData): number => {
+    if (typeof stock.c === 'number') return stock.c;
+    if (typeof stock.pc === 'number') return stock.pc;
+    return 0;
+  };
+
   // Filter and sort data
   const filteredData = data?.stock?.detail 
-  ? data.stock.detail.filter(stock => 
-      stock.s.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  : [];
+    ? data.stock.detail.filter(stock => 
+        stock.s.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
     
   const sortedData = [...filteredData].sort((a, b) => {
     if (sortField === "s") {
@@ -87,12 +128,22 @@ export default function Dashboard() {
         : b.s.localeCompare(a.s);
     }
     
-    return sortDirection === "asc"
-      ? a[sortField] - b[sortField]
-      : b[sortField] - a[sortField];
+    if (sortField === "c") {
+      const aChange = getChangePercent(a);
+      const bChange = getChangePercent(b);
+      return sortDirection === "asc" ? aChange - bChange : bChange - aChange;
+    }
+    
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+    
+    return 0;
   });
 
-  // Paginate data
   const paginatedData = sortedData.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
@@ -105,11 +156,17 @@ export default function Dashboard() {
     return date.toLocaleTimeString();
   };
 
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(num);
+  };
+
   return (
     <div className="font-sans text-secondary-800">
       {/* Dashboard Hero Section */}
       <div className="bg-gradient-to-b from-primary-100 to-primary-50/50 py-10 mb-8 shadow-sm relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-1 bg-primary-300"></div>
         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-primary-200/50 blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-primary-300/40 blur-3xl"></div>
@@ -145,9 +202,9 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Search input */}
+        {/* Search and filters */}
         <div className="bg-white p-4 rounded-lg border border-primary-100 shadow-sm mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-grow max-w-md">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <Search className="w-4 h-4 text-primary-400" />
@@ -160,36 +217,47 @@ export default function Dashboard() {
                 className="pl-10 border-primary-200 focus-visible:ring-primary-500"
               />
             </div>
-            <Button
-              variant={sortField === "s" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleSort('s')}
-              className={`flex items-center text-sm ${sortField === 's' 
-                ? 'bg-primary-600 hover:bg-primary-700' 
-                : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
-            >
-              Symbol
-            </Button>
-            <Button
-              variant={sortField === "lp" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleSort('lp')}
-              className={`flex items-center text-sm ${sortField === 'lp' 
-                ? 'bg-primary-600 hover:bg-primary-700' 
-                : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
-            >
-              Price
-            </Button>
-            <Button
-              variant={sortField === "c" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleSort('c')}
-              className={`flex items-center text-sm ${sortField === 'c' 
-                ? 'bg-primary-600 hover:bg-primary-700' 
-                : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
-            >
-              Change
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant={sortField === "s" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSort('s')}
+                className={`flex items-center text-sm ${sortField === 's' 
+                  ? 'bg-primary-600 hover:bg-primary-700' 
+                  : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
+              >
+                Symbol
+                {sortField === "s" && (
+                  sortDirection === "asc" ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant={sortField === "lp" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSort('lp')}
+                className={`flex items-center text-sm ${sortField === 'lp' 
+                  ? 'bg-primary-600 hover:bg-primary-700' 
+                  : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
+              >
+                Price
+                {sortField === "lp" && (
+                  sortDirection === "asc" ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant={sortField === "c" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSort('c')}
+                className={`flex items-center text-sm ${sortField === 'c' 
+                  ? 'bg-primary-600 hover:bg-primary-700' 
+                  : 'border-primary-200 text-primary-700 hover:bg-primary-50'}`}
+              >
+                Change
+                {sortField === "c" && (
+                  sortDirection === "asc" ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -198,7 +266,7 @@ export default function Dashboard() {
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-5 mb-6 shadow-sm">
             <div className="flex items-start">
               <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -206,6 +274,12 @@ export default function Dashboard() {
                 <h3 className="text-lg font-medium text-red-800">Error fetching market data</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{(error as Error)?.message || "Please try again later"}</p>
+                  {errorDetails && (
+                    <details className="mt-2 p-2 bg-red-100 rounded border border-red-300">
+                      <summary className="cursor-pointer font-medium">Technical details</summary>
+                      <pre className="mt-1 whitespace-pre-wrap text-xs">{errorDetails}</pre>
+                    </details>
+                  )}
                 </div>
                 <div className="mt-4">
                   <Button 
@@ -230,47 +304,16 @@ export default function Dashboard() {
             </TableCaption>
             <TableHeader className="bg-primary-50 border-b border-primary-100">
               <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:bg-primary-100/70 text-primary-800"
-                  onClick={() => handleSort("s")}
-                >
+                <TableHead className="cursor-pointer hover:bg-primary-100/70 text-primary-800">
                   Symbol
-                  {sortField === "s" && (
-                    sortDirection === "asc" ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
                 </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-primary-100/70 text-right text-primary-800"
-                  onClick={() => handleSort("lp")}
-                >
-                  Last Price
-                  {sortField === "lp" && (
-                    sortDirection === "asc" ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-primary-100/70 text-right text-primary-800"
-                  onClick={() => handleSort("c")}
-                >
-                  Change %
-                  {sortField === "c" && (
-                    sortDirection === "asc" ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-primary-100/70 text-right text-primary-800"
-                  onClick={() => handleSort("q")}
-                >
-                  Volume
-                  {sortField === "q" && (
-                    sortDirection === "asc" ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
+                <TableHead className="text-right text-primary-800">Last Price</TableHead>
+                <TableHead className="text-right text-primary-800">Change %</TableHead>
+                <TableHead className="text-right text-primary-800">Volume</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-primary-50">
               {isLoading ? (
-                // Loading skeleton
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -280,75 +323,97 @@ export default function Dashboard() {
                   </TableRow>
                 ))
               ) : paginatedData.length > 0 ? (
-                // Actual data
                 paginatedData.map((stock) => (
                   <TableRow key={stock.s} className="hover:bg-primary-50/50 transition-colors">
-                    <TableCell className="font-medium text-primary-900">{stock.s}</TableCell>
-                    <TableCell className="text-right font-mono">{stock.lp.toFixed(2)}</TableCell>
-                    <TableCell 
-                      className={`text-right font-medium ${
-                        stock.c > 0 
-                          ? "text-green-600"
-                          : stock.c < 0 
-                            ? "text-red-600"
-                            : ""
-                      }`}
-                    >
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        stock.c > 0 
-                          ? "bg-green-50 border border-green-100"
-                          : stock.c < 0 
-                            ? "bg-red-50 border border-red-100"
-                            : "bg-gray-50 border border-gray-100"
-                      }`}>
-                        {stock.c > 0 ? "+" : ""}{stock.c.toFixed(2)}%
-                      </span>
+                    <TableCell className="font-medium text-primary-900">
+                      {stock.s}
                     </TableCell>
-                    <TableCell className="text-right text-secondary-700">{stock.q.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                // No data found
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
-                    <div className="flex flex-col items-center">
-                      <div className="rounded-full bg-primary-100 p-3 mb-2">
-                        <Search className="h-6 w-6 text-primary-500" />
-                      </div>
-                      <p className="text-secondary-600">No stocks found matching "{searchTerm}"</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination className="mt-6">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setPage(p => Math.max(p - 1, 1))}
-                  className={`${page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} bg-white border border-primary-200 hover:bg-primary-50 text-primary-700`}
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <span className="px-4 py-2 bg-primary-50 border border-primary-200 rounded-md text-primary-800 font-medium">
-                  Page {page} of {totalPages}
-                </span>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                  className={`${page >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} bg-white border border-primary-200 hover:bg-primary-50 text-primary-700`}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-      </div>
-    </div>
-  );
-}
+                    <TableCell className="text-right font-mono">
+                      {formatNumber(stock.lp)}
+                    </TableCell>
+                    <TableCell 
+                                          className={`text-right font-medium ${
+                                            getChangePercent(stock) > 0 
+                                              ? "text-green-600"
+                                              : getChangePercent(stock) < 0 
+                                                ? "text-red-600"
+                                                : "text-gray-600"
+                                          }`}
+                                        >
+                                          <span className={`px-2 py-1 rounded-full text-xs ${
+                                            getChangePercent(stock) > 0 
+                                              ? "bg-green-50 border border-green-100"
+                                              : getChangePercent(stock) < 0 
+                                                ? "bg-red-50 border border-red-100"
+                                                : "bg-gray-50 border border-gray-100"
+                                          }`}>
+                                            {getChangePercent(stock) > 0 ? "+" : ""}
+                                            {formatNumber(getChangePercent(stock))}%
+                                          </span>
+                                        </TableCell>
+                                        <TableCell className="text-right text-secondary-700">
+                                          {stock.q.toLocaleString()}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  ) : (
+                                    <TableRow>
+                                      <TableCell colSpan={4} className="text-center py-8">
+                                        <div className="flex flex-col items-center">
+                                          <div className="rounded-full bg-primary-100 p-3 mb-2">
+                                            <Search className="h-6 w-6 text-primary-500" />
+                                          </div>
+                                          <p className="text-secondary-600">
+                                            {searchTerm 
+                                              ? `No stocks found matching "${searchTerm}"`
+                                              : "No market data available"
+                                            }
+                                          </p>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </div>
+                    
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                              <div className="mt-6 flex justify-center">
+                                <Pagination>
+                                  <PaginationContent>
+                                    <PaginationItem>
+                                      <PaginationPrevious 
+                                        onClick={() => setPage(p => Math.max(p - 1, 1))}
+                                        className={`${
+                                          page <= 1 
+                                            ? "pointer-events-none opacity-50" 
+                                            : "cursor-pointer"
+                                        } bg-white border border-primary-200 hover:bg-primary-50 text-primary-700`}
+                                      />
+                                    </PaginationItem>
+                                    <PaginationItem>
+                                      <span className="px-4 py-2 bg-primary-50 border border-primary-200 rounded-md text-primary-800 font-medium">
+                                        Page {page} of {totalPages}
+                                      </span>
+                                    </PaginationItem>
+                                    <PaginationItem>
+                                      <PaginationNext 
+                                        onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                                        className={`${
+                                          page >= totalPages 
+                                            ? "pointer-events-none opacity-50" 
+                                            : "cursor-pointer"
+                                        } bg-white border border-primary-200 hover:bg-primary-50 text-primary-700`}
+                                      />
+                                    </PaginationItem>
+                                  </PaginationContent>
+                                </Pagination>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+export default Dashboard;

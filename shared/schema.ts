@@ -73,7 +73,8 @@ export const orderFormSchema = insertOrderSchema.extend({
   is_trigger_order: z.boolean().optional().default(false),
   // TMS credentials - these won't be stored in the database, only used for API authentication
   tms_username: z.string().min(1, { message: "TMS Username is required" }),
-  tms_password: z.string().min(1, { message: "TMS Password is required" })
+  tms_password: z.string().min(1, { message: "TMS Password is required" }),
+  broker_number: z.string().min(1, { message: "Broker number is required" })
 });
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;

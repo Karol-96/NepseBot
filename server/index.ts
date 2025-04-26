@@ -1,7 +1,25 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { NepseTMSService } from './nepse-tms-service';
+import { orderMonitorService } from './order-monitor-service'; // Add this import
 
+// Add this before starting the server
+async function initializeServices() {
+  log('Initializing services...', 'server');
+  
+  // Initialize NepseTMSService (pre-download OCR models)
+  await NepseTMSService.initialize();
+  
+  // Start order monitoring service
+  orderMonitorService.start();
+  
+  log('Services initialized', 'server');
+}
+
+// The rest of the file is the same...
+// Call initialization before starting the server
+await initializeServices();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

@@ -99,58 +99,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-// API endpoint to proxy market data requests
-app.get("/api/market-data", async (_req: Request, res: Response) => {
-  try {
-    const response = await fetch("https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary", {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-    
-    // Read the response as text first
-    const text = await response.text();
-    
+  app.get("/api/market-data", async (_req: Request, res: Response) => {
     try {
-      // Try to parse the text as JSON
-      const data = JSON.parse(text);
-      return res.status(200).json(data);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      // Set headers to mimic a browser as closely as possible
+      const response = await fetch("https://merolagani.com/handlers/webrequesthandler.ashx?type=market_summary", {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Referer': 'https://merolagani.com/',
+          'Origin': 'https://merolagani.com',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
-      // If the response contains HTML (which would cause the error you're seeing)
-      if (text.includes('<!DOCTYPE')) {
-        // Fall back to the sample data
-        const sampleDataPath = path.join(process.cwd(), 'market_data_sample.json');
-        const sampleData = JSON.parse(fs.readFileSync(sampleDataPath, 'utf8'));
-        console.log('Falling back to sample data');
-        return res.status(200).json(sampleData);
+      // Get the raw text response
+      const rawText = await response.text();
+      
+      // Log the first part of the response for debugging
+      console.log("API Response (first 100 chars):", rawText.substring(0, 100));
+      
+      // Check if the response is HTML (error) or JSON (success)
+      if (rawText.includes('<!DOCTYPE') || rawText.includes('<html')) {
+        console.error("Received HTML instead of JSON from external API");
+        return res.status(500).json({ 
+          message: "External API returned HTML instead of JSON",
+          error: "API returned HTML document" 
+        });
       }
       
+      try {
+        // Parse the text as JSON
+        const jsonData = JSON.parse(rawText);
+        
+        // Check for the expected structure
+        if (jsonData && jsonData.mt === 'ok' && jsonData.turnover && jsonData.turnover.detail) {
+          console.log("Successfully parsed market data with", jsonData.turnover.detail.length, "stocks");
+          
+          // Transform the API response to match the expected structure in your client
+          // Your dashboard expects data.stock.detail
+          const transformedData = {
+            mt: jsonData.mt,
+            stock: {
+              date: jsonData.turnover.date || new Date().toISOString(),
+              detail: jsonData.turnover.detail
+            }
+          };
+          
+          return res.status(200).json(transformedData);
+        } else {
+          console.error("Unexpected JSON structure from API:", Object.keys(jsonData));
+          return res.status(500).json({ 
+            message: "External API returned unexpected data structure",
+            error: "Unexpected data structure" 
+          });
+        }
+      } catch (parseError) {
+        console.error("Failed to parse JSON:", parseError);
+        return res.status(500).json({ 
+          message: "Failed to parse response from external API",
+          error: parseError instanceof Error ? parseError.message : String(parseError)
+        });
+      }
+    } catch (fetchError) {
+      console.error("Fetch error:", fetchError);
       return res.status(500).json({ 
-        message: 'Failed to parse market data',
-        error: parseError.message,
-        sample: text.substring(0, 100) // First 100 chars for debugging
+        message: "Failed to fetch data from external API",
+        error: fetchError instanceof Error ? fetchError.message : String(fetchError)
       });
     }
-  } catch (error) {
-    console.error("Error fetching market data:", error);
-    
-    // Fall back to the sample data in case of any error
-    try {
-      const sampleDataPath = path.join(process.cwd(), 'market_data_sample.json');
-      const sampleData = JSON.parse(fs.readFileSync(sampleDataPath, 'utf8'));
-      console.log('Falling back to sample data due to fetch error');
-      return res.status(200).json(sampleData);
-    } catch (sampleError) {
-      return res.status(500).json({ 
-        message: "Failed to fetch market data and sample data is not available",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }
-});
+  });
   // API endpoint to create a trigger order
   app.post("/api/trigger-orders", async (req: Request, res: Response) => {
     try {

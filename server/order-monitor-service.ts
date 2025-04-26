@@ -3,6 +3,7 @@ import { orders, TRIGGER_STATUS, Order, StockData } from '@shared/schema';
 import { marketDataService } from './market-data-service';
 import { websocketService } from './websocket-server';
 import { TMSService } from './tms-service';
+import { NepseTMSService } from './nepse-tms-service';
 import { log } from './vite';
 import { and, eq, inArray } from 'drizzle-orm';
 
@@ -40,25 +41,33 @@ export class OrderMonitorService {
    * Stop the order monitoring service
    */
   stop(): void {
-    if (!this.isRunning || !this.monitorInterval) {
+    if (!this.isRunning) {
+      log('Order monitor is not running', 'order-monitor');
       return;
     }
     
-    clearInterval(this.monitorInterval);
-    this.monitorInterval = null;
-    this.isRunning = false;
+    if (this.monitorInterval) {
+      clearInterval(this.monitorInterval);
+      this.monitorInterval = null;
+    }
     
+    this.isRunning = false;
     log('Order monitor stopped', 'order-monitor');
   }
   
   /**
-   * Set the monitoring interval
-   * @param intervalMs Interval in milliseconds
+   * Set the interval between checks (in milliseconds)
    */
   setInterval(intervalMs: number): void {
-    this.intervalMs = intervalMs;
+    if (intervalMs < 1000) {
+      log(`Interval too small (${intervalMs}ms), setting to 1000ms`, 'order-monitor');
+      intervalMs = 1000;
+    }
     
-    // Restart the monitor if it's already running
+    this.intervalMs = intervalMs;
+    log(`Order monitor interval set to ${intervalMs}ms`, 'order-monitor');
+    
+    // Restart the service if it was running
     if (this.isRunning) {
       this.stop();
       this.start();
@@ -211,22 +220,42 @@ export class OrderMonitorService {
     try {
       log(`Executing order ${order.id} at price ${currentPrice}`, 'order-monitor');
       
-      // We need to retrieve TMS credentials for this order
-      // In a real system, these would be securely stored or provided by the user
-      // For demo purposes, we'll use placeholder credentials
-      // In production, you would implement secure credential management
-      const orderWithCredentials = {
-        ...order,
-        tms_username: 'placeholder_username', // This would come from secure storage
-        tms_password: 'placeholder_password',  // This would come from secure storage
-        current_price: currentPrice
-      };
+      // Get credentials from secure storage (simplified for this example)
+      const tms_username = 'placeholder_username'; // This would come from secure storage
+      const tms_password = 'placeholder_password'; // This would come from secure storage
+      const nepse_username = '2021026996'; // This should come from secure storage
+      const nepse_password = 'alphaGamma1#'; // This should come from secure storage
       
-      // Call TMS service to execute the order
-      const result = await TMSService.processOrder(orderWithCredentials);
+      // Check if base price equals target price
+      const isBasePriceEqualsTargetPrice = 
+        order.base_price && 
+        order.target_price && 
+        Math.abs(parseFloat(order.base_price.toString()) - parseFloat(order.target_price.toString())) < 0.01;
+      
+      let result;
+      
+      // If base price equals target price, use NepseTMSService
+      if (isBasePriceEqualsTargetPrice) {
+        log(`Base price equals target price for order ${order.id}. Using NEPSE TMS scraper`, 'order-monitor');
+        
+        result = await NepseTMSService.executeOrder({
+          ...order,
+          current_price: currentPrice,
+          nepse_username,
+          nepse_password
+        });
+      } else {
+        // Regular order execution via TMS API
+        result = await TMSService.processOrder({
+          ...order,
+          tms_username,
+          tms_password,
+          current_price: currentPrice
+        });
+      }
       
       if (!result.success) {
-        throw new Error(`TMS order execution failed: ${result.error}`);
+        throw new Error(`Order execution failed: ${result.error}`);
       }
       
       // Update the order with execution details
@@ -236,8 +265,8 @@ export class OrderMonitorService {
           executed_at: new Date(),
           execution_price: currentPrice,
           tms_order_id: result.order_id,
-          tms_status: result.status,
-          tms_processed_at: result.processed_at
+          tms_status: isBasePriceEqualsTargetPrice ? 'NEPSE_EXECUTED' : result.status,
+          tms_processed_at: new Date()
         })
         .where(eq(orders.id, order.id));
       
@@ -249,7 +278,7 @@ export class OrderMonitorService {
       // Broadcast the execution
       websocketService.broadcastOrderUpdate(updatedOrder);
       
-      log(`Order ${order.id} executed successfully with TMS order ID: ${result.order_id}`, 'order-monitor');
+      log(`Order ${order.id} executed successfully with ${isBasePriceEqualsTargetPrice ? 'NEPSE TMS' : 'TMS API'}`, 'order-monitor');
     } catch (error) {
       log(`Failed to execute order ${order.id}: ${error}`, 'order-monitor');
       
@@ -269,7 +298,7 @@ export class OrderMonitorService {
   }
   
   /**
-   * Update the last_checked_at timestamp for an order
+   * Update the last checked timestamp for an order
    */
   private async updateLastChecked(orderId: number): Promise<void> {
     await db.update(orders)
@@ -339,6 +368,4 @@ export class OrderMonitorService {
     }
   }
 }
-
-// Singleton instance
 export const orderMonitorService = new OrderMonitorService();
