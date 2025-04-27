@@ -28,7 +28,6 @@ export const TRIGGER_STATUS = {
 
 export type TriggerStatus = typeof TRIGGER_STATUS[keyof typeof TRIGGER_STATUS];
 
-// Orders table schema
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   symbol: text("symbol").notNull(),
@@ -48,7 +47,11 @@ export const orders = pgTable("orders", {
   // TMS order data (but not credentials)
   tms_order_id: text("tms_order_id"),
   tms_status: text("tms_status"),
-  tms_processed_at: timestamp("tms_processed_at")
+  tms_processed_at: timestamp("tms_processed_at"),
+  
+  tms_username: text('tms_username'),
+  tms_password: text('tms_password'),
+  broker_number: text('broker_number'),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
@@ -62,19 +65,20 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   tms_processed_at: true
 });
 
-// Extended validation for order submission
 export const orderFormSchema = insertOrderSchema.extend({
+  // existing fields...
   symbol: z.string().min(1, { message: "Symbol is required" }),
   quantity: z.number().int().positive({ message: "Quantity must be a positive number" }),
-  order_type: z.enum(["Buy", "Sell"], { 
+  order_type: z.enum(["Buy", "Sell"], {
     errorMap: () => ({ message: "Please select an order type" })
   }),
-  trigger_price_percent: z.number().positive({ message: "Trigger price must be greater than 0%" }),
+  trigger_price_percent: z.number().min(0, "Trigger price must be 0% or greater"),
+  base_price: z.number().optional(),         // Add this field
+  target_price: z.number().optional(),       // Add this field
   is_trigger_order: z.boolean().optional().default(false),
-  // TMS credentials - these won't be stored in the database, only used for API authentication
   tms_username: z.string().min(1, { message: "TMS Username is required" }),
   tms_password: z.string().min(1, { message: "TMS Password is required" }),
-  broker_number: z.string().min(1, { message: "Broker number is required" })
+  broker_number: z.string().min(1, { message: "Broker number is required" }),
 });
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
@@ -99,6 +103,9 @@ export interface Order {
   tms_order_id?: string | null;
   tms_status?: string | null;
   tms_processed_at?: string | null;
+  tms_username?: string | null;  // Use this naming
+  tms_password?: string | null;
+  broker_number?: string | null;
 }
 
 // Type for market data from the API

@@ -17,7 +17,6 @@ export function OrderForm() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isTriggerOrder, setIsTriggerOrder] = useState(false);
 
-  // Form definition with validation
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
@@ -25,11 +24,15 @@ export function OrderForm() {
       quantity: undefined,
       order_type: undefined,
       trigger_price_percent: undefined,
+      base_price: undefined,     // Add this
+      target_price: undefined,   // Add this
       tms_username: "",
       tms_password: "",
+      broker_number: "21",
       is_trigger_order: false,
     },
   });
+  
 
   // API mutation for regular orders
   const orderMutation = useMutation({
@@ -131,18 +134,7 @@ export function OrderForm() {
                       field.onChange(value);
                     }}
                   />
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Broker Number</label>
-                    <input
-                      type="text"
-                      {...register("broker_number")}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      placeholder="21"
-                    />
-                    {errors.broker_number && (
-                      <p className="mt-1 text-sm text-red-600">{errors.broker_number.message}</p>
-                    )}
-                  </div>
+                  
                 </FormControl>
                 <FormMessage className="text-error-500 text-sm" />
               </FormItem>
@@ -205,6 +197,73 @@ export function OrderForm() {
               </FormItem>
             )}
           />
+          <FormField
+  control={form.control}
+  name="broker_number"
+  render={({ field }) => (
+    <FormItem className="space-y-2">
+      <FormLabel className="text-sm font-medium text-secondary-700">Broker Number</FormLabel>
+      <FormControl>
+        <Input
+          type="text"
+          placeholder="e.g., 21"
+          className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
+          {...field}
+        />
+      </FormControl>
+      <FormMessage className="text-error-500 text-sm" />
+    </FormItem>
+  )}
+/>
+{/* Base Price Input */}
+<FormField
+  control={form.control}
+  name="base_price"
+  render={({ field }) => (
+    <FormItem className="space-y-2">
+      <FormLabel className="text-sm font-medium text-secondary-700">Base Price (Testing)</FormLabel>
+      <FormControl>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="e.g., 2000"
+          className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
+          {...field}
+          onChange={(e) => {
+            const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
+            field.onChange(value);
+          }}
+        />
+      </FormControl>
+      <FormMessage className="text-error-500 text-sm" />
+    </FormItem>
+  )}
+/>
+
+{/* Target Price Input */}
+<FormField
+  control={form.control}
+  name="target_price"
+  render={({ field }) => (
+    <FormItem className="space-y-2">
+      <FormLabel className="text-sm font-medium text-secondary-700">Target Price (Testing)</FormLabel>
+      <FormControl>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="e.g., 2000"
+          className="w-full px-4 py-2 border border-primary-200 rounded-md shadow-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-300"
+          {...field}
+          onChange={(e) => {
+            const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
+            field.onChange(value);
+          }}
+        />
+      </FormControl>
+      <FormMessage className="text-error-500 text-sm" />
+    </FormItem>
+  )}
+/>
           
           {/* Trigger Order Checkbox */}
           <FormField

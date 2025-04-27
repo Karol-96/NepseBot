@@ -73,6 +73,18 @@ export class OrderMonitorService {
       this.start();
     }
   }
+
+  /**
+   * Manually trigger an immediate check of orders
+   */
+  checkNow(): void {
+    if (this.isRunning) {
+      log('Manually triggering order monitoring check', 'order-monitor');
+      this.monitorOrders().catch(err => {
+        console.error('Error during manual order check:', err);
+      });
+    }
+  }
   
   /**
    * Check for orders that have reached their trigger conditions
@@ -107,7 +119,15 @@ export class OrderMonitorService {
         log(`No market data available for ${order.symbol}`, 'order-monitor');
         continue;
       }
-      
+      console.log("DEBUG ORDER DATA:", {
+        id: order.id,
+        symbol: order.symbol,
+        credentials: {
+          username: order.tms_username,
+          hasPassword: Boolean(order.tms_password),
+          broker: order.broker_number
+        }
+      });
       await this.processOrder(order, stockData);
     }
   }
@@ -220,17 +240,12 @@ export class OrderMonitorService {
     try {
       log(`Executing order ${order.id} at price ${currentPrice}`, 'order-monitor');
       
-      // Get credentials from secure storage (simplified for this example)
-      const tms_username = 'placeholder_username'; // This would come from secure storage
-      const tms_password = 'placeholder_password'; // This would come from secure storage
-      const nepse_username = '2021026996'; // This should come from secure storage
-      const nepse_password = 'alphaGamma1#'; // This should come from secure storage
-      
-      // Check if base price equals target price
+      // Check if base price equals target price (including explicit check for 0% triggers)
       const isBasePriceEqualsTargetPrice = 
-        order.base_price && 
-        order.target_price && 
-        Math.abs(parseFloat(order.base_price.toString()) - parseFloat(order.target_price.toString())) < 0.01;
+        (order.base_price && 
+         order.target_price && 
+         Math.abs(parseFloat(order.base_price.toString()) - parseFloat(order.target_price.toString())) < 0.01) || 
+        parseFloat(order.trigger_price_percent.toString()) === 0;
       
       let result;
       
@@ -241,15 +256,14 @@ export class OrderMonitorService {
         result = await NepseTMSService.executeOrder({
           ...order,
           current_price: currentPrice,
-          nepse_username,
-          nepse_password
+          tms_username: order.tms_username || '',  // This is likely undefined
+          tms_password: order.tms_password || '',  // This is likely undefined
+          broker_number: order.broker_number || '21'
         });
       } else {
         // Regular order execution via TMS API
         result = await TMSService.processOrder({
           ...order,
-          tms_username,
-          tms_password,
           current_price: currentPrice
         });
       }
@@ -261,39 +275,25 @@ export class OrderMonitorService {
       // Update the order with execution details
       await db.update(orders)
         .set({
-          trigger_status: TRIGGER_STATUS.EXECUTED,
           executed_at: new Date(),
-          execution_price: currentPrice,
+          execution_price: currentPrice.toString(),
           tms_order_id: result.order_id,
-          tms_status: isBasePriceEqualsTargetPrice ? 'NEPSE_EXECUTED' : result.status,
-          tms_processed_at: new Date()
+          tms_status: result.status,
+          tms_processed_at: result.processed_at,
+          trigger_status: 'EXECUTED'
         })
         .where(eq(orders.id, order.id));
       
-      // Get the updated order
-      const [updatedOrder] = await db.select()
-        .from(orders)
-        .where(eq(orders.id, order.id));
-      
-      // Broadcast the execution
-      websocketService.broadcastOrderUpdate(updatedOrder);
-      
-      log(`Order ${order.id} executed successfully with ${isBasePriceEqualsTargetPrice ? 'NEPSE TMS' : 'TMS API'}`, 'order-monitor');
+      log(`Order ${order.id} executed successfully`, 'order-monitor');
     } catch (error) {
-      log(`Failed to execute order ${order.id}: ${error}`, 'order-monitor');
+      log(`Error executing order ${order.id}: ${error}`, 'order-monitor');
       
-      // Update order status to failed
-      await this.updateTriggerStatus(order.id, TRIGGER_STATUS.FAILED);
-      
-      // Get the updated order
-      const [updatedOrder] = await db.select()
-        .from(orders)
+      // Update order status to indicate execution failure
+      await db.update(orders)
+        .set({
+          trigger_status: 'EXECUTION_FAILED'
+        })
         .where(eq(orders.id, order.id));
-      
-      // Broadcast the failure
-      websocketService.broadcastOrderUpdate(updatedOrder);
-      
-      throw error;
     }
   }
   

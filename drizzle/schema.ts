@@ -6,30 +6,42 @@ export const users = pgTable('users', {
   username: text('username').notNull().unique(),
   password: text('password').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Orders table
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
-  userId: serial('user_id').references(() => users.id),
   symbol: text('symbol').notNull(),
   quantity: numeric('quantity').notNull(),
-  orderType: text('order_type').notNull(), // 'BUY' or 'SELL'
-  price: numeric('price'),
-  status: text('status').notNull().default('PENDING'), // 'PENDING', 'COMPLETED', 'CANCELLED'
+  order_type: text('order_type').notNull(),
+  trigger_price_percent: numeric('trigger_price_percent'),
+  submitted_at: timestamp('submitted_at').defaultNow(),
+  is_trigger_order: boolean('is_trigger_order').default(false),
   
-  // Trigger-specific fields
-  isTriggerOrder: boolean('is_trigger_order').default(false),
-  triggerType: text('trigger_type'), // 'ABOVE' or 'BELOW'
-  triggerPrice: numeric('trigger_price'),
-  triggerPercentage: numeric('trigger_percentage'),
-  basePrice: numeric('base_price'),
-  targetPrice: numeric('target_price'),
-  triggerStatus: text('trigger_status'), // 'PENDING', 'TRIGGERED', 'COMPLETED', 'CANCELLED'
-  lastChecked: timestamp('last_checked'),
-  triggeredAt: timestamp('triggered_at'),
+  // Base and target prices for trigger orders
+  base_price: numeric('base_price'),
+  target_price: numeric('target_price'),
+  
+  // Trigger status tracking
+  trigger_status: text('trigger_status'),
+  last_checked_at: timestamp('last_checked_at'),
+  triggered_at: timestamp('triggered_at'),
+  
+  // Order execution tracking
+  executed_at: timestamp('executed_at'),
+  execution_price: numeric('execution_price'),
+  
+  // TMS order details
+  tms_order_id: text('tms_order_id'),
+  tms_status: text('tms_status'),
+  tms_processed_at: timestamp('tms_processed_at'),
+  
+// Fix in drizzle/schema.ts
+tms_username: text('tms_username'),
+tms_password: text('tms_password'),
+broker_number: text('broker_number'),
   
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

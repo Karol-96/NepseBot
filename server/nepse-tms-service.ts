@@ -6,10 +6,11 @@ import fs from 'fs';
 
 // Extended interface for order data including current price and credentials
 interface NepseOrderData extends Partial<Order> {
-  current_price?: number;
-  nepse_username: string;
-  nepse_password: string;
-}
+    current_price?: number;
+    tms_username: string;
+    tms_password: string;
+    broker_number?: string; // Add this field
+  }
 
 /**
  * Service to interact with NEPSE TMS using the Selenium-based scraper
@@ -45,30 +46,34 @@ export class NepseTMSService {
     processed_at?: Date;
   }> {
     try {
-      // Ensure models are downloaded (this should already be done during initialization)
-      if (!this.modelsDownloaded) {
-        log("Models not pre-loaded, downloading now...", 'nepse-tms');
-        await this.ensureModelsDownloaded();
-      }
-      
-      if (!orderData.nepse_username || !orderData.nepse_password) {
-        return {
-          success: false,
-          message: "NEPSE TMS credentials are required",
-          error: "Missing credentials"
-        };
-      }
-
+        // Log credentials for debugging
+        console.log("TMS Credentials received:", {
+          username: orderData.tms_username,
+          password: Boolean(orderData.tms_password), // Just log that it exists, not the actual password
+          broker: orderData.broker_number
+        });
+    
+        // Check if credentials are missing
+        if (!orderData.tms_username || !orderData.tms_password) {
+          return {
+            success: false,
+            message: "Missing TMS credentials",
+            error: "Missing credentials"
+          };
+        }
+  
       log(`Executing NEPSE TMS order for ${orderData.symbol} via scraper`, 'nepse-tms');
       
       // Run the Python scraper as a child process
       const result = await this.runScraperProcess(
-        orderData.nepse_username,
-        orderData.nepse_password,
-        orderData.symbol || '',
-        orderData.quantity || 0,
-        orderData.order_type || 'Buy'
+        orderData.tms_username,
+        orderData.tms_password,
+        orderData.symbol,
+        orderData.quantity as number,
+        orderData.order_type,
+        orderData.broker_number || "21" // Use the provided broker number or default to 21
       );
+      
       
       if (!result.success) {
         return {
@@ -185,7 +190,8 @@ export class NepseTMSService {
     password: string, 
     symbol: string, 
     quantity: number,
-    orderType: string
+    orderType: string,
+    brokerNumber: string = "21" // Add parameter with default value
   ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
       // Check if the script exists
@@ -204,7 +210,8 @@ export class NepseTMSService {
         '--password', password,
         '--symbol', symbol,
         '--quantity', quantity.toString(),
-        '--order-type', orderType
+        '--order-type', orderType,
+        '--broker-number', brokerNumber
       ]);
       
       let stdoutData = '';

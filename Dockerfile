@@ -40,7 +40,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 
-# Install your global CLIs
+# # Install your global CLIs
+# RUN npm run migrate
 RUN npm install -g concurrently
 
 # install exactly what's in package-lock (including devDeps)

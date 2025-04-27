@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y postgresql-client
 
 # Create SQL script
 RUN echo "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL);" > /app/init.sql
-RUN echo "CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, quantity NUMERIC NOT NULL, order_type TEXT NOT NULL, trigger_price_percent NUMERIC, submitted_at TIMESTAMP DEFAULT NOW(), is_trigger_order BOOLEAN DEFAULT FALSE, base_price NUMERIC, target_price NUMERIC, trigger_status TEXT, last_checked_at TIMESTAMP, triggered_at TIMESTAMP, executed_at TIMESTAMP, execution_price NUMERIC, tms_order_id TEXT, tms_status TEXT, tms_processed_at TIMESTAMP);" >> /app/init.sql
+RUN echo "CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, quantity NUMERIC NOT NULL, order_type TEXT NOT NULL, trigger_price_percent NUMERIC, submitted_at TIMESTAMP DEFAULT NOW(), is_trigger_order BOOLEAN DEFAULT FALSE, base_price NUMERIC, target_price NUMERIC, trigger_status TEXT, last_checked_at TIMESTAMP, triggered_at TIMESTAMP, executed_at TIMESTAMP, execution_price NUMERIC, tms_order_id TEXT, tms_status TEXT, tms_processed_at TIMESTAMP,tms_username TEXT,tms_password TEXT,broker_number TEXT;" >> /app/init.sql
 
 # Run database initialization
 CMD ["sh", "-c", "sleep 5 && PGPASSWORD=tradetrigger123 psql -h db -U tradetrigger -d tradetrigger -f /app/init.sql && echo 'Database initialized successfully'"]

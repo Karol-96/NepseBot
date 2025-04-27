@@ -21,8 +21,9 @@ import subprocess
 import argparse
 
 class NepseScraper:
-    def __init__(self):
-        self.url = "https://tms21.nepsetms.com.np/login"
+    def __init__(self, broker_number="21"):
+        self.broker_number = broker_number
+        self.url = f"https://tms{self.broker_number}.nepsetms.com.np/login"
         self.max_retries = 5
         self.retry_delay = 3
         
@@ -539,10 +540,11 @@ def main():
     parser.add_argument('--symbol', required=True, help='Stock symbol to trade')
     parser.add_argument('--quantity', required=True, type=int, help='Quantity of shares to trade')
     parser.add_argument('--order-type', required=True, choices=['Buy', 'Sell'], help='Order type (Buy/Sell)')
+    parser.add_argument('--broker-number', default="21", help='Broker number for TMS URL')
     
     args = parser.parse_args()
     
-    scraper = NepseScraper()
+    scraper = NepseScraper(broker_number=args.broker_number)
     try:
         # Login to the system
         login_success = scraper.login_with_retries(args.username, args.password)
